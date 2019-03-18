@@ -1,0 +1,19 @@
+{
+  "manifests": {
+    "themes": {
+      "current": {
+        "dependencies": {
+          "storefront": {
+            "available": [
+              {
+                "name": "2.4.5"
+              }
+            ],
+            "constraint": "2.4.3",
+            "source": "wordpress-theme"
+          }
+        }
+      }
+    }
+  }
+}
