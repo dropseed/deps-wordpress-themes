@@ -32,7 +32,8 @@ def collect():
                 installed_version = version_match.groups(0)[0]
 
         if not installed_version:
-            raise Exception(f'Could not detect installed version of {theme}')
+            logging.error(f'Could not detect installed version of {theme}')
+            continue
 
         installed_version = installed_version.decode('utf-8').strip()
 
