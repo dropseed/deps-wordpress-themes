@@ -3,61 +3,70 @@ import os
 import sys
 import logging
 from subprocess import run
+import json
 
 import requests
 
-from utils import write_json_to_temp_file
 
-
-def collect():
-    themes_path = sys.argv[1]
+def collect(input_path, output_path):
+    themes_path = input_path
     themes_contents = os.listdir(themes_path)
-    theme_directories = [x for x in themes_contents if os.path.isdir(os.path.join(themes_path, x))]
+    theme_directories = [
+        x for x in themes_contents if os.path.isdir(os.path.join(themes_path, x))
+    ]
 
-    run(['deps', 'hook', 'before_update'], check=True)
-
-    collected_themes = {}
+    current_themes = {}
+    updated_themes = {}
 
     for theme in theme_directories:
 
-        print(f'Collecting {theme}')
+        print(f"Collecting {theme}")
 
         theme_style_path = os.path.join(themes_path, theme, "style.css")
         installed_version = None
 
-        with open(theme_style_path, 'rb') as f:
+        with open(theme_style_path, "rb") as f:
             contents = f.read()
-            version_match = re.search(b'^\s*\**\s*Version:\s*(.*)\s*$', contents, re.MULTILINE)
+            version_match = re.search(
+                b"^\s*\**\s*Version:\s*(.*)\s*$", contents, re.MULTILINE
+            )
             if version_match:
                 installed_version = version_match.groups(0)[0]
 
         if not installed_version:
-            logging.error(f'Could not detect installed version of {theme}')
+            logging.error(f"Could not detect installed version of {theme}")
             continue
 
-        installed_version = installed_version.decode('utf-8').strip()
+        installed_version = installed_version.decode("utf-8").strip()
+        latest = None
 
         try:
-            response = requests.get(f'https://api.wordpress.org/themes/info/1.1/?action=theme_information&request[slug]={theme}')
-            available = [response.json()["version"]]
-            print(available)
+            response = requests.get(
+                f"https://api.wordpress.org/themes/info/1.1/?action=theme_information&request[slug]={theme}"
+            )
+            latest = response.json()["version"]
         except Exception:
-            logging.error(f'Unable to find available versions of {theme} in API.')
-            available = [installed_version]
+            logging.error(f"Unable to find available versions of {theme} in API.")
 
-        collected_themes[theme] = {
-            'constraint': installed_version,
-            'available': [{'name': x} for x in available],
-            'source': 'wordpress-theme',
+        current_themes[theme] = {
+            "constraint": installed_version,
+            "source": "wordpress-theme",
         }
+        if latest and latest != installed_version:
+            updated_themes[theme] = {"constraint": latest, "source": "wordpress-theme"}
 
     schema_output = {
-        'manifests': {
-            themes_path: {
-                'current': {
-                    'dependencies': collected_themes
-                }
-            }
-        }
+        "manifests": {themes_path: {"current": {"dependencies": current_themes}}}
     }
-    run(['deps', 'collect', write_json_to_temp_file(schema_output)], check=True)
+
+    if updated_themes:
+        schema_output["manifests"][themes_path]["updated"] = {
+            "dependencies": updated_themes
+        }
+
+    with open(output_path, "w+") as f:
+        json.dump(schema_output, f)
+
+
+if __name__ == "__main__":
+    collect(sys.argv[1], sys.argv[2])

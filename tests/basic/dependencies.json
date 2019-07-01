@@ -1,0 +1,22 @@
+{
+  "manifests": {
+    "themes": {
+      "current": {
+        "dependencies": {
+          "storefront": {
+            "constraint": "2.4.3",
+            "source": "wordpress-theme"
+          }
+        }
+      },
+      "updated": {
+        "dependencies": {
+          "storefront": {
+            "constraint": "2.5.0",
+            "source": "wordpress-theme"
+          }
+        }
+      }
+    }
+  }
+}
